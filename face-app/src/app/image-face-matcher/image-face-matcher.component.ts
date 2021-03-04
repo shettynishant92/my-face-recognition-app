@@ -27,6 +27,7 @@ export class ImageFaceMatcherComponent implements OnInit {
   async start() {
     const container = document.createElement('div');
     container.style.position = 'relative';
+    //container.style.marginTop = '50em';
     document.body.append(container)
     const labeledFaceDescriptors = await this.loadImageLabels();
     const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
@@ -37,6 +38,13 @@ export class ImageFaceMatcherComponent implements OnInit {
       if (image) image.remove()
       if (canvas) canvas.remove()
       image = await faceapi.bufferToImage(this.imageUpload.files[0]);
+      if (image.width > image.height) {
+        image.width = 531;
+        image.height = 413;
+      } else {
+        image.width = 413;
+        image.height = 531;
+      }
       container.append(image);
       canvas = faceapi.createCanvasFromMedia(image);
       container.append(canvas);
@@ -55,12 +63,12 @@ export class ImageFaceMatcherComponent implements OnInit {
   }
 
   loadImageLabels() {
-    const labels = ['Black Widow', 'Captain America', 'Tony Stark', 'Jim Rhodes', 'Thor', 'Hawkeye', 'Captain Marvel'];
+    const labels = ['Black Widow', 'Captain America', 'Tony Stark', 'Jim Rhodes', 'Thor', 'Hawkeye', 'Captain Marvel', 'Nishant Shetty', 'My Beautiful Cuddlebug'];
     return Promise.all(
       labels.map(async label => {
         const descriptions = []
         for (let i = 1; i <= 2; i++) {
-          const img = await faceapi.fetchImage(`https://raw.githubusercontent.com/WebDevSimplified/Face-Recognition-JavaScript/master/labeled_images/${label}/${i}.jpg`)
+          const img = await faceapi.fetchImage(`assets/labeled_images/${label}/${i}.jpg`)
           const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor()
           descriptions.push(detections.descriptor)
         }
