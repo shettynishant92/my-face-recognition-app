@@ -1,4 +1,3 @@
-import { ViewCompiler } from '@angular/compiler';
 import { Component, OnInit } from '@angular/core';
 import * as faceapi from 'face-api.js';
 import { WebcamImage } from 'ngx-webcam';

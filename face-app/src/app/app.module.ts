@@ -5,11 +5,13 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { FaceMatcherComponent } from './face-matcher/face-matcher.component';
 import { WebcamModule } from 'ngx-webcam';
+import { ImageFaceMatcherComponent } from './image-face-matcher/image-face-matcher.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    FaceMatcherComponent
+    FaceMatcherComponent,
+    ImageFaceMatcherComponent
   ],
   imports: [
     BrowserModule,

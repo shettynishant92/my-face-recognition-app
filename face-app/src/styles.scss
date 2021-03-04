@@ -6,8 +6,11 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
   }
 
   canvas {
     position: absolute;
+    top: 0;
+    left: 0;
   }
