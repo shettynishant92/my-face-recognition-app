@@ -1,0 +1,66 @@
+<div class="d-flex justify-content-center" *ngIf="loading">
+    <div role="status">
+        <span class="sr-only" id="loading"></span>
+    </div>
+</div>
+<div *ngIf="!loading">
+    <div class="row">
+        <h1>Step {{step}}: {{getStepMessage(step)}}</h1>
+        <hr>
+        <div class="col-xs-12 col-xl-6 text-center my-3" *ngIf="step === 1">
+            <webcam [height]="500" [width]="500" [trigger]="triggerObservable" (imageCapture)="handleImage($event)"
+                class="d-block">
+            </webcam>
+
+            <!-- Button Takes Photo -->
+            <button class="btn btn-primary btn-block mt-3" (click)="triggerSnapshot();">Take A Snapshot</button>
+        </div>
+        <!-- Snapshot Div where image will be shown -->
+        <div class="col-xs-12 col-xl-6 text-center my-3" *ngIf="step === 1">
+            <div class="snapshot" *ngIf="webcamImage">
+                <img height="375" width="500" [src]="webcamImage.imageAsDataUrl" />
+                <h3 class="mt-3">Snapshot taken! You can take another if the picture is not clear</h3>
+            </div>
+        </div>
+        <div class="col-xs-12 col-lg-6 my-3 mx-auto" *ngIf="step === 2">
+            <div class="uploaded-image-styles" id="uploadedImage"></div>
+            <label class="form-label" for="imageUpload">Please upload a passport size photo:</label>
+            <input class="form-control" type="file" id="imageUpload" accept=".jpg, .jpeg, .png"
+                (change)="fileChangeEvent($event.target.files)">
+            <div class="mt-3" *ngIf="processingResult">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only" aria-label="true">Getting face match results ...</span>
+                </div>
+                <span class="spinner-text">Getting face match results ...</span>
+            </div>
+        </div>
+    </div>
+    <div class="row" *ngIf="!processingResult && processingCompleted && step === 3">
+        <div class="col-xs-12 mx-auto">
+            <h1>Comparison Results</h1>
+            <h2 [ngClass]="matchFound ? 'success' : 'failure'">{{matchFound ? 'Congratulations! The images have been
+                successfully matched'
+                : 'Oh no! The images do not match, please check if you have a clearer picture and try again'}}</h2>
+        </div>
+        <div class="col-xs-12">
+            <h1>Face Match Score</h1>
+            <h2>{{faceMatchScore}} %</h2>
+        </div>
+    </div>
+    <!-- Progress bar -->
+    <hr>
+    <div class="row my-3">
+        <div class="px-3">
+            <div class="col-md-6 col-xs-12 float-right">
+                <button type="button" class="btn btn-success btn-lg" [disabled]="disabledCheck()"
+                    (click)="stepChange('next')">Continue</button>
+                <div class="alert alert-danger mt-2" role="alert" *ngIf="noFaceDetectedError">
+                    No face has been detected in the image. Please upload another clearer image.
+                </div>
+            </div>
+            <div class="col-md-6 col-xs-12 float-left">
+                <button type="button" class="btn btn-link btn-lg" (click)="stepChange('back')">Back</button>
+            </div>
+        </div>
+    </div>
+</div>

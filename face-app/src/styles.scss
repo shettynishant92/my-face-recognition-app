@@ -1,13 +1,26 @@
 body {
-    margin: 0;
-    padding: 0;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  //display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
 
-  canvas {
-    position: absolute;
-  }
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+}
