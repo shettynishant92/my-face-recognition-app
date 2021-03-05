@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from 'constants';
 import * as faceapi from 'face-api.js';
 import { WebcamImage } from 'ngx-webcam';
 import { Subject, Observable } from 'rxjs';
@@ -18,17 +17,20 @@ export class WebcamImageMatcherComponent implements OnInit {
   private trigger: Subject<void> = new Subject<void>();
   loading = true;
   matchFound = false;
-  faceMatchScore = 70;
+  faceMatchScore = 0;
   processingResult = false;
   processingCompleted = false;
+  container: any;
+  step = 1;
+  loadedImageLabels: any;
+  noFaceDetectedError = false;
 
   constructor() { }
 
   ngOnInit(): void {
     this.imageUpload = document.getElementById('imageUpload');
-    console.log(faceapi.nets);
     Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri('/assets/models'),
+      faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models'),
       faceapi.nets.faceLandmark68Net.loadFromUri('/assets/models'),
       faceapi.nets.faceRecognitionNet.loadFromUri('/assets/models'),
       faceapi.nets.faceExpressionNet.loadFromUri('/assets/models')
@@ -41,11 +43,10 @@ export class WebcamImageMatcherComponent implements OnInit {
     this.trigger.next();
   }
 
-  handleImage(webcamImage: WebcamImage): void {
-    console.info('received webcam image', webcamImage);
+  async handleImage(webcamImage: WebcamImage) {
     this.webcamImage = webcamImage;
     this.images.push(webcamImage);
-    console.log(this.images);
+    this.loadedImageLabels = await this.loadImageLabels();
   }
 
   async start(uploadedImage: any) {
@@ -53,40 +54,33 @@ export class WebcamImageMatcherComponent implements OnInit {
     this.faceMatchScore = 0;
     this.processingResult = true;
     this.processingCompleted = false;
-    const container = document.createElement('div');
-    container.style.position = 'relative';
-    document.body.append(container)
-    const labeledFaceDescriptors = await this.loadImageLabels();
-    const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
     let image;
     let canvas;
-    document.body.append('Loaded');
-      if (image) image.remove()
-      if (canvas) canvas.remove()
-      image = await faceapi.bufferToImage(uploadedImage);
-      container.append(image);
-      canvas = faceapi.createCanvasFromMedia(image);
-      container.append(canvas);
-      const displaySize = { width: image.width, height: image.height };
-      faceapi.matchDimensions(canvas, displaySize);
-      const detections = await faceapi.detectAllFaces(image).withFaceLandmarks().withFaceDescriptors();
-      document.body.append(detections.length.toString());
-      const resizedDetections = faceapi.resizeResults(detections, displaySize);
-      const results = resizedDetections.map(d => faceMatcher.findBestMatch(d.descriptor));
-      results.forEach((result, i) => {
-        const box = resizedDetections[i].detection.box;
-        if (result.label === 'Face match detected') {
-           this.matchFound = true;
-           this.faceMatchScore = result.distance;
-        }
-        const drawBox = new faceapi.draw.DrawBox(box, { label: result.toString() });
-        drawBox.draw(canvas);
-      });
-      this.processingResult = false;
-      this.processingCompleted = true;
+
+    const labeledFaceDescriptors = this.loadedImageLabels;
+    const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.5);
+    image = await faceapi.bufferToImage(uploadedImage);
+    canvas = faceapi.createCanvasFromMedia(image);
+    const displaySize = { width: image.width, height: image.height };
+    faceapi.matchDimensions(canvas, displaySize);
+    const detections = await faceapi.detectAllFaces(image, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 })).withFaceLandmarks().withFaceDescriptors();
+    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+    const results = resizedDetections.map(d => faceMatcher.findBestMatch(d.descriptor));
+    results.forEach((result, i) => {
+      if (result.label === 'Face match detected') {
+        this.matchFound = true;
+        // Displaying as a percentage
+        this.faceMatchScore = Math.round((1 - result.distance) * 100);
+      } else if (!this.matchFound && i === results.length - 1) {
+        // Displaying as a percentage
+        this.faceMatchScore = Math.round((1 - result.distance) * 100);
+      }
+    });
+    this.processingResult = false;
+    this.processingCompleted = true;
   }
 
-  loadImageLabels() {
+  loadImageLabels(): Promise<any> {
     const labels = ['Face match detected'];
     // return async () => {
     //   const descriptions = []
@@ -98,9 +92,14 @@ export class WebcamImageMatcherComponent implements OnInit {
     return Promise.all(
       labels.map(async label => {
         const descriptions = [];
-        const img = await faceapi.fetchImage(`assets/labeled_images/Nishant Shetty/1.jpg`);
-        const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-        descriptions.push(detections.descriptor);
+        const img = await faceapi.fetchImage(`${this.webcamImage.imageAsDataUrl}`);
+        const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 })).withFaceLandmarks().withFaceDescriptor();
+        if (detections?.descriptor) {
+          this.noFaceDetectedError = false;
+          descriptions.push(detections.descriptor);
+        } else {
+          this.noFaceDetectedError = true;
+        }
         return new faceapi.LabeledFaceDescriptors(label, descriptions)
       })
     )
@@ -110,15 +109,11 @@ export class WebcamImageMatcherComponent implements OnInit {
     return this.trigger.asObservable();
   }
 
-  fileChangeEvent(e: File[]){
-    // const img = document.createElement("img");
-    // img.src = "http://www.google.com/intl/en_com/images/logo_plain.png";
+  fileChangeEvent(e: File[]): void {
     const reader = new FileReader();
-    let imagePath = e;
     let imgSrc;
-    this.uploadSuccess = true;
-    reader.readAsDataURL(e[0]); 
-    reader.onload = (_event) => { 
+    reader.readAsDataURL(e[0]);
+    reader.onload = (_event) => {
       imgSrc = reader.result;
       const img = document.createElement("img");
       img.src = imgSrc;
@@ -129,19 +124,37 @@ export class WebcamImageMatcherComponent implements OnInit {
         uploadedImage.removeChild(uploadedImage.firstChild);
       }
       uploadedImage.appendChild(img);
-      this.start(e[0]); 
+      this.start(e[0]);
+      this.uploadSuccess = true;
     }
-    // setTimeout(() => {
-    //   const img = document.createElement("img");
-    //   img.src = imgSrc;
-    //   img.height = 300;
-    //   img.width = 200;
-    //   const uploadedImage = document.getElementById("uploadedImage");
-    //   uploadedImage.appendChild(img);
-    // });
-    console.log(e[0]);
-    const fileName = e[0].name;
-    const fileType = e[0].type;
-}
+  }
 
+  disabledCheck(): boolean {
+    if (this.step === 1 && (!this.webcamImage || this.noFaceDetectedError)) {
+      return true;
+    } else if (this.step === 2 && !this.uploadSuccess) {
+      return true;
+    } else if (this.step === 3) {
+      return true;
+    }
+    return false;
+  }
+
+  stepChange(navigate: 'next' | 'back'): void {
+    if (navigate === 'next') {
+      this.step++;
+    } else if (this.step !== 1) {
+      this.step--;
+    }
+  }
+
+  getStepMessage(step: number): string {
+    if (step === 1) {
+      return 'Please take a snapshot from your WebCam';
+    } else if (step === 2) {
+      return 'Please upload a passport size image or selfie';
+    } else {
+      return 'Results';
+    }
+  }
 }
