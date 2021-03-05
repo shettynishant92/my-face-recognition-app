@@ -82,13 +82,6 @@ export class WebcamImageMatcherComponent implements OnInit {
 
   loadImageLabels(): Promise<any> {
     const labels = ['Face match detected'];
-    // return async () => {
-    //   const descriptions = []
-    //   const img = await faceapi.fetchImage(`${this.webcamImage.imageAsDataUrl}`)
-    //   const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor()
-    //   descriptions.push(detections.descriptor);
-    //   return new faceapi.LabeledFaceDescriptors(label, descriptions)
-    // }
     return Promise.all(
       labels.map(async label => {
         const descriptions = [];
@@ -117,8 +110,9 @@ export class WebcamImageMatcherComponent implements OnInit {
       imgSrc = reader.result;
       const img = document.createElement("img");
       img.src = imgSrc;
-      img.height = 531;
-      img.width = 413;
+      // Resizing the image to display
+      img.style.width = '50%';
+      img.style.height = 'auto';
       const uploadedImage = document.getElementById("uploadedImage");
       if (uploadedImage.hasChildNodes()) {
         uploadedImage.removeChild(uploadedImage.firstChild);
